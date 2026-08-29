@@ -2,6 +2,10 @@
 
 LFO-style MIDI CC automation sequencer running on Push 3. Draw curves in a web UI; the hack loops them and sends MIDI CC values to Ableton Live for recording or real-time control.
 
+A hack for [`push-hack`](https://github.com/federico-pepe/ableton-push-hack)
+(Push 3's on-device hack framework) — install it via that repo's Push
+Catalog hack, or build and deploy it yourself, see "Build & deploy" below.
+
 Port: **7703** — `http://push.local:7703`
 
 ---
@@ -183,6 +187,28 @@ To verify routing on Push:
 cat /proc/asound/seq/clients | grep -A5 "Ableton Live"
 cat /proc/asound/seq/clients | grep -A5 "Push Hack"
 ```
+
+---
+
+## Build & deploy
+
+**Via Push Catalog (recommended):** install `push-hack`'s Push Catalog hack
+first, then install this one from its web UI or `push-catalog install
+automation` on-device — it's listed in
+[ableton-push-hack's catalog](https://github.com/federico-pepe/ableton-push-hack/blob/main/catalog/catalog.json).
+
+**Manually**, from a clone of this repo:
+```bash
+PATH=$PATH:/usr/local/go/bin make            # build for Push 3 (linux/amd64)
+```
+This produces `build/automation` (and copies it to the repo root). Deploy it
+to `/data/push-hack/hacks/automation/` alongside this repo's `hack.json`,
+and register/start it the same way the framework's own `install.sh` does.
+
+**Releasing a new version:** bump `hack.json`'s `version`, then
+`git tag vX.Y.Z && git push origin vX.Y.Z` — `.github/workflows/release.yml`
+builds, publishes the release tarball, and updates `release.json` so
+push-catalog's next install/update picks it up automatically.
 
 ---
 
