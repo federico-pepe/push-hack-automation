@@ -6,7 +6,8 @@ A hack for [`push-hack`](https://github.com/federico-pepe/ableton-push-hack)
 (Push 3's on-device hack framework) — install it via that repo's Push
 Catalog hack, or build and deploy it yourself, see "Build & deploy" below.
 
-Port: **7703** — `http://push.local:7703`
+Installed via Push Hack Catalog, its port is assigned dynamically at install
+time — open it from Push Manager's menu bar rather than a fixed URL.
 
 ---
 
@@ -15,7 +16,7 @@ Port: **7703** — `http://push.local:7703`
 ```
 WebUI (browser)
   ↕ HTTP + SSE (EventSource)
-automation binary (Go, port 7703, running on Push)
+automation binary (Go, running on Push, port assigned dynamically)
   └─ CC lanes → ALSA seq QUEUE_DIRECT → Ableton Live MIDI input port (128:2)
 
 BPM sync (MIDI clock):
@@ -123,7 +124,9 @@ Free mode uses the lane's own `FreeBPM` and `FreeSecs` settings, ignoring Live's
 
 ## API Reference
 
-Base URL: `http://push.local:7703`
+Base URL: `http://push.local:<port>` — `<port>` is assigned dynamically by
+Push Hack Catalog at install time; find it in Push Manager's menu bar or
+via `GET /api/catalog` on push-catalog.
 
 | Method | Path | Description |
 |--------|------|-------------|
