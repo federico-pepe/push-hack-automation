@@ -63,6 +63,25 @@ CC values are sent to Live's internal ALSA MIDI input port — Live only routes 
 
 ---
 
+## Setup on Push 3 Standalone
+
+Requires Live 12.4 or later on Push.
+
+1. Open **MIDI Preferences** on Push.
+2. In the **Input** tab, scroll to select **Push Hack Automation** and enable the **Remote** checkbox. Leave Track, Sync and MPE disabled.
+3. In the **Output** tab, scroll to select **Push Hack Clock** and enable the **Sync** checkbox. Leave Track and Remote disabled.
+
+![Screenshot of the Input tab of the MIDI Preferences on Push with Push Hack Automation enabled](resources/push-hack-automation-settings-midiin.png)
+![Screenshot of the Output tab of the MIDI Preferences on Push with Push Hack Clock enabled](resources/push-hack-automation-clock-settings.png)
+
+When you write automation in the browser, map it to Push the same way you map any external MIDI controller:
+
+1. Open **MIDI Preferences** on Push.
+2. Select **Mapping**.
+3. Select **Add Mapping** and follow the steps on the screen. If the automation is active, you receive the MIDI CC automatically.
+
+---
+
 ## Curve Editor
 
 Each lane has a canvas curve editor:
