@@ -2,7 +2,7 @@
   "id": "automation",
   "name": "Automation",
   "description": "LFO-style MIDI CC automation sequencer. Draw curves in the web UI, send CC values to Push 3 in real-time so Live can record them as automation.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "author": "push-hack",
   "binary": "automation",
   "enabled": true,
