@@ -76,6 +76,7 @@ func main() {
 	// Start playback engine and BPM sync poller. Transport (play/stop) is driven
 	// solely by the Push Play button (CC85) — see onPlayButtonPress in midi.go.
 	startAutoEngine()
+	startPushHackTempo()
 	startBPMPoller(*pushManager)
 
 	// Routes
@@ -94,7 +95,7 @@ func main() {
 
 	addr := fmt.Sprintf(":%d", config.Port)
 	log.Printf("Automation %s starting on %s", config.Version, addr)
-	log.Printf("BPM sync from: %s/api/live/tempo", *pushManager)
+	log.Printf("BPM sync from: PushHack Remote Script, else MIDI clock, else %s/api/live/tempo", *pushManager)
 
 	srv := httpx.NewServer(addr, handler)
 

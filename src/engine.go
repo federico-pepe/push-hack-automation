@@ -4,7 +4,8 @@ package main
 // Manages up to 8 lanes, each with a breakpoint curve, loop timing, and CC target.
 // Plays curves at 50Hz, sending CC values to Push 3 via ALSA seq.
 // Supports linear and Catmull-Rom smooth interpolation.
-// Polls push-manager /api/live/tempo + /api/live/playing every 2s.
+// Live's tempo comes from the PushHack Remote Script (pushhack package). Without
+// it, the MIDI clock and then push-manager's /api/live/tempo are the fallbacks.
 
 import (
 	"encoding/json"
@@ -22,6 +23,8 @@ import (
 
 	"github.com/federico-pepe/ableton-push-hack/core/pmclient"
 	"github.com/federico-pepe/ableton-push-hack/core/sse"
+
+	"automation/pushhack"
 )
 
 // ── Data model ────────────────────────────────────────────────────────────
@@ -223,6 +226,24 @@ func interpolateLane(lane *AutoLane, phase float64) float64 {
 
 // ── BPM + transport poller ────────────────────────────────────────────────
 
+// phClient follows Live's tempo through the PushHack Remote Script. While it
+// is active, no other tempo source writes liveBPM.
+var phClient *pushhack.Client
+
+func pushHackActive() bool { return phClient != nil && phClient.Active() }
+
+func startPushHackTempo() {
+	phClient = &pushhack.Client{
+		OnTempo: func(bpm float64) {
+			liveBPMMu.Lock()
+			liveBPM = bpm
+			liveBPMMu.Unlock()
+		},
+		Logf: log.Printf,
+	}
+	phClient.Start()
+}
+
 func startBPMPoller(base string) {
 	pushManagerBase = base
 	go func() {
@@ -230,6 +251,9 @@ func startBPMPoller(base string) {
 		ticker := time.NewTicker(5 * time.Second) // slower fallback poll
 		defer ticker.Stop()
 		for range ticker.C {
+			if pushHackActive() {
+				continue // the Remote Script pushes every tempo change
+			}
 			// Only use HTTP BPM if MIDI clock is stale (> 5s since last tick)
 			clockMu.Lock()
 			total := clockTotal
