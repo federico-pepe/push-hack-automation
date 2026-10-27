@@ -239,7 +239,7 @@ func onMidiClock() {
 	clockTotal++
 	clockMu.Unlock()
 
-	if prev > 0 {
+	if prev > 0 && !pushHackActive() { // the Remote Script's exact tempo wins
 		elapsed := float64(now-prev) * 1e-9
 		if elapsed > 0.04 && elapsed < 10.0 { // sanity: ~6–1500 BPM
 			bpm := 60.0 / elapsed

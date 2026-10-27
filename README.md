@@ -19,9 +19,9 @@ WebUI (browser)
 automation binary (Go, running on Push, port assigned dynamically)
   └─ CC lanes → ALSA seq QUEUE_DIRECT → Ableton Live MIDI input port (128:2)
 
-BPM sync (MIDI clock):
-Push 3 hardware (16:0) → MIDI clock (24 PPQN) → automation "Push Hack Clock" input port
-automation reads timestamps of 24 ticks, computes BPM = 60.0 / elapsed_per_beat
+BPM sync (PushHack Remote Script):
+Live → PushHack Remote Script → "tempo" event over 127.0.0.1:7704 → automation
+(fallback without the script: MIDI clock from Push3 16:0, then push-manager's /api/live/tempo)
 
 Transport sync (Push Play button):
 Push 3 hardware (16:0) → CC85 val=127 → automation toggles Running (play/stop)
@@ -69,7 +69,7 @@ Requires Live 12.4 or later on Push.
 
 1. Open **MIDI Preferences** on Push.
 2. In the **Input** tab, scroll to select **Push Hack Automation** and enable the **Remote** checkbox. Leave Track, Sync and MPE disabled.
-3. In the **Output** tab, scroll to select **Push Hack Clock** and enable the **Sync** checkbox. Leave Track and Remote disabled.
+3. Only if you do not use the PushHack Remote Script: in the **Output** tab, scroll to select **Push Hack Clock** and enable the **Sync** checkbox. Leave Track and Remote disabled. (The Push Play button needs no setting. With the Remote Script, Sync is not needed for the tempo.)
 
 ![Screenshot of the Input tab of the MIDI Preferences on Push with Push Hack Automation enabled](resources/push-hack-automation-settings-midiin.png)
 ![Screenshot of the Output tab of the MIDI Preferences on Push with Push Hack Clock enabled](resources/push-hack-automation-clock-settings.png)
@@ -124,20 +124,25 @@ Enable/disable via the **Sync to Live** checkbox in the transport bar, or `POST 
 
 ---
 
-## BPM Sync (MIDI Clock)
+## BPM Sync
 
-BPM is derived from Live's MIDI clock signal (24 PPQN) received on the "Push Hack Clock" ALSA port subscribed to Push3:16:0. Live sends MIDI clock to the Push hardware regardless of transport state.
+Live's tempo comes from the **PushHack Remote Script**, which ships with Push Hack. The hack connects to the script on `127.0.0.1:7704`, subscribes to the `tempo` topic, and sets its BPM each time the script reports a change. The value is Live's exact tempo. You do not need to send MIDI clock for it.
 
-**Formula:** BPM = `60.0 / elapsed` where `elapsed` is the time span of 24 consecutive clock ticks (= 1 beat). Implemented with a 24-slot ring buffer of nanosecond timestamps. Sanity check: `0.04s < elapsed < 10.0s` (BPM 6–1500).
+**Requirement:** PushHack Remote Script 0.2.0 or newer, selected in a control-surface slot in Live. The hack logs `pushhack: following Live's tempo` when it connects, and tries again every 2 to 15 seconds when it cannot.
 
-**Fallback:** If no MIDI clock has been received in the last 5 seconds, the automation engine uses the last known BPM (default 120.0).
+**Fallbacks.** While the script is not connected, the hack uses what it used before:
+
+1. The MIDI clock (24 PPQN) on the "Push Hack Clock" port subscribed to Push3:16:0. This needs **Sync** on for that port in Live's MIDI preferences (see Setup). BPM = `60.0 / elapsed`, where `elapsed` is the time of 24 clock ticks (1 beat), from a 24-slot ring of nanosecond timestamps. Sanity check: `0.04s < elapsed < 10.0s`.
+2. Push Manager's `/api/live/tempo`, polled every 5 seconds, when no clock arrived in the last 5 seconds.
+
+If none of these gives a value, the engine keeps the last known BPM (default 120.0).
 
 Phase advance per 20ms tick (sync mode):
 ```
 Δphase = 0.020 * liveBPM / (beats × 60)
 ```
 
-Free mode uses the lane's own `FreeBPM` and `FreeSecs` settings, ignoring Live's clock.
+Free mode uses the lane's own `FreeBPM` and `FreeSecs` settings, ignoring Live's tempo.
 
 ---
 
