@@ -24,9 +24,8 @@ import (
 // ── Global MIDI output state ───────────────────────────────────────────────
 
 var (
-	midiTargetMu     sync.Mutex
-	midiTargetClient = alsaseq.Push3ClientDefault
-	midiTargetPort   = alsaseq.Push3PortDefault
+	// pushLive: where Push 3's Live Port is. Refreshed by detectPush3Port.
+	pushLive alsaseq.Push3
 
 	liveDestMu     sync.Mutex
 	liveDestClient = byte(128) // Ableton Live — may shift, updated by detectLivePort
@@ -90,10 +89,8 @@ func initMidiOut() {
 }
 
 func push3Dest() (client, port byte) {
-	midiTargetMu.Lock()
-	c, p := midiTargetClient, midiTargetPort
-	midiTargetMu.Unlock()
-	return c, p
+	a := pushLive.Addr()
+	return a.Client, a.Port
 }
 
 func liveDest() (client, port byte) {
@@ -151,10 +148,8 @@ func sendSeqCC(channel, cc byte, value int32) error {
 // initMidiIn creates an ALSA seq input port and subscribes to Push 3's live port
 // to receive MIDI clock, start, and stop events.
 func initMidiIn() {
-	midiTargetMu.Lock()
-	srcClient := midiTargetClient
-	srcPort := midiTargetPort
-	midiTargetMu.Unlock()
+	srcAddr := pushLive.Addr()
+	srcClient, srcPort := srcAddr.Client, srcAddr.Port
 
 	c, err := alsaseq.Open()
 	if err != nil {
@@ -262,24 +257,14 @@ func onMidiTransportStart() {
 	clockMu.Unlock()
 }
 
-// detectPush3Port scans /proc/asound/seq/clients for "Ableton Push 3 Live Port"
-// and updates midiTargetClient/Port. Handles shifted client numbers when extra
-// USB MIDI devices are connected at boot.
+// detectPush3Port looks Push 3's Live Port up by name (core alsaseq.Push3).
+// Handles shifted client numbers when extra USB MIDI devices or the loopback
+// card come first.
 func detectPush3Port() {
-	const push3PortName = "Ableton Push 3 Live Port"
-	p, ok := alsaseq.FindByName(push3PortName, alsaseq.CapRead)
-	if !ok {
-		log.Printf("midi: Push 3 Live Port not found — using %d:%d",
-			midiTargetClient, midiTargetPort)
-		return
-	}
-	c, port := p.Addr.Client, p.Addr.Port
-	midiTargetMu.Lock()
-	if c != midiTargetClient || port != midiTargetPort {
+	was := pushLive.Addr()
+	now := pushLive.Refresh()
+	if now != was {
 		log.Printf("midi: auto-detected Push 3 at %d:%d (was %d:%d)",
-			c, port, midiTargetClient, midiTargetPort)
-		midiTargetClient = c
-		midiTargetPort = port
+			now.Client, now.Port, was.Client, was.Port)
 	}
-	midiTargetMu.Unlock()
 }
